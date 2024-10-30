@@ -1,0 +1,44 @@
+import requests
+from requests.auth import HTTPBasicAuth
+
+# Splunk API details
+splunk_url = "https://your-splunk-server:8089/services/saved/searches"
+username = "your_splunk_username"
+password = "your_splunk_password"
+
+# Define the search query to detect multiple sign-in attempts
+search_query = """search index=auth_logs sourcetype=login_events
+| stats count by user, src_ip
+| where count > 5"""
+
+# Alert parameters
+alert_name = "Multiple_Sign_In_Attempts"
+alert_payload = {
+    "name": alert_name,
+    "search": search_query,
+    "alert_type": "number of events",   # Alert triggers based on the number of events
+    "alert_condition": "greater than",  # Trigger if event count exceeds threshold
+    "alert_threshold": "0",             # Trigger if more than 0 events match
+    "alert.severity": "2",              # Severity level; can be 1 (High) to 5 (Informational)
+    "dispatch.earliest_time": "-15m",   # Time window for the alert, here last 15 minutes
+    "dispatch.latest_time": "now",
+    "cron_schedule": "*/15 * * * *",    # Runs every 15 minutes
+    "actions": "email",                 # Action: send email
+    "action.email.to": "your_email@example.com",
+    "action.email.subject": "Alert: Multiple Sign-In Attempts Detected",
+    "action.email.message": "Multiple sign-in attempts detected for user or IP."
+}
+
+# Make the API request to create the alert
+response = requests.post(
+    splunk_url,
+    data=alert_payload,
+    auth=HTTPBasicAuth(username, password),
+    verify=False  # Set to True if using SSL certificate
+)
+
+# Check response
+if response.status_code == 201:
+    print("Alert created successfully.")
+else:
+    print("Failed to create alert:", response.status_code, response.text)
